@@ -105,7 +105,7 @@ app.post("/_login", async (req, res) => {
             req.session.username = username;
             // return res.status(200).json({ token });
             // return res.status(201).json({ message: "Login successfully" });
-            
+
             return res.redirect('changePassword')
         }
 
@@ -117,19 +117,19 @@ app.get("/changePassword", async (req, res) => {
     // if(!req.session.username){//check session undefined
     //     res.redirect('/login')
     // }else{
-        res.render('changePassword', { text: text })
-        text = ""
+    res.render('changePassword', { text: text })
+    text = ""
     // }
-    
+
 })
 
 app.post("/_changePassword", async (req, res) => {
     // const username = req.session.username;
     const username = "123456Wa";
     const { oldPassword, newPassword } = req.body;
-    
-    console.log("old"+oldPassword)
-    console.log("new change"+newPassword)
+
+    console.log("old" + oldPassword)
+    console.log("new change" + newPassword)
     con.query("select username, password from users where username = ?", [username], async function (err, result, fields) {
         if (err) {
             return res.status(401).json({ message: "can't connect db" });
@@ -142,11 +142,11 @@ app.post("/_changePassword", async (req, res) => {
         if (!passwordMatch) {   //check password incorrect
             text = "Password incorrect"
             return res.redirect('changePassword')
-        }else if (isPasswordSimilar(newPassword, oldPassword, 5)) { // check similarity
-            
+        } else if (isPasswordSimilar(newPassword, oldPassword, 5)) { // check similarity
+
             text = "New password is similar to old password"
             return res.redirect('changePassword')
-        }else {//change password here
+        } else {//change password here
             const salt = await bcrypt.genSalt(10);
             const hashedPassword = await bcrypt.hash(newPassword, salt);
             con.query("UPDATE users SET password = ? WHERE username = ?", [hashedPassword, username], (error, result, fields) => {
