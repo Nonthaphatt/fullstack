@@ -6,7 +6,7 @@ const app = express();
 
 const session = require('express-session');
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 
 require("dotenv").config();
 const secretKey = process.env.SECRET_KEY;
@@ -16,6 +16,7 @@ const passWord = process.env.PASSWORD;
 const dataBase = process.env.DATABASE;
 
 const path = require('path')
+const cors = require('cors')
 
 // use {} cause call it to be module not object
 const { isPasswordSimilar } = require(path.join(__dirname, 'modules/checkPasswordSimilar'));
@@ -44,7 +45,27 @@ con.connect(function (err) {
     console.log("Connected!");
 });
 
+app.use(cors())
 var text = ""
+
+app.get('/test', async (req, res) => {
+    con.query('SELECT * FROM customer_account', async function (error, results, fields) {
+        if (error) throw error;
+        
+        res.send(results) 
+        return
+    })
+
+});
+
+app.post('/_test', (req, res) => {
+    const { username, password } = req.body;
+    con.query("insert into users(username, password) values(?, ?)", [username, password], (error, result, fields) => {
+        if (error) throw error;
+        console.log('doneeeeee');
+      });
+
+  });
 
 app.get("/register", async (req, res) => {
     res.render('register', { text: text })
@@ -83,7 +104,7 @@ app.get("/login", async (req, res) => {
 
 app.post("/_login", async (req, res) => {
     const { username, password } = req.body;
-    con.query("select username, password from users where username = ?", [username], async function (err, result, fields) {
+    con.query("select username, password from customer_account where username = ?", [username], async function (err, result, fields) {
         if (err) {
             return res.status(401).json({ message: "can't connect db" });
         }
@@ -105,8 +126,8 @@ app.post("/_login", async (req, res) => {
             req.session.username = username;
             // return res.status(200).json({ token });
             // return res.status(201).json({ message: "Login successfully" });
-
-            return res.redirect('changePassword')
+            return res.status(202).json({ message: "login success" });
+            // return res.redirect('changePassword')
         }
 
     });
@@ -117,19 +138,19 @@ app.get("/changePassword", async (req, res) => {
     // if(!req.session.username){//check session undefined
     //     res.redirect('/login')
     // }else{
-    res.render('changePassword', { text: text })
-    text = ""
+        res.render('changePassword', { text: text })
+        text = ""
     // }
-
+    
 })
 
 app.post("/_changePassword", async (req, res) => {
     // const username = req.session.username;
     const username = "123456Wa";
     const { oldPassword, newPassword } = req.body;
-
-    console.log("old" + oldPassword)
-    console.log("new change" + newPassword)
+    
+    console.log("old"+oldPassword)
+    console.log("new change"+newPassword)
     con.query("select username, password from users where username = ?", [username], async function (err, result, fields) {
         if (err) {
             return res.status(401).json({ message: "can't connect db" });
@@ -142,11 +163,11 @@ app.post("/_changePassword", async (req, res) => {
         if (!passwordMatch) {   //check password incorrect
             text = "Password incorrect"
             return res.redirect('changePassword')
-        } else if (isPasswordSimilar(newPassword, oldPassword, 5)) { // check similarity
-
+        }else if (isPasswordSimilar(newPassword, oldPassword, 5)) { // check similarity
+            
             text = "New password is similar to old password"
             return res.redirect('changePassword')
-        } else {//change password here
+        }else {//change password here
             const salt = await bcrypt.genSalt(10);
             const hashedPassword = await bcrypt.hash(newPassword, salt);
             con.query("UPDATE users SET password = ? WHERE username = ?", [hashedPassword, username], (error, result, fields) => {
